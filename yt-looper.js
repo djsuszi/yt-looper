@@ -333,7 +333,7 @@ function getPlayerSize(engine) {
 
   var size = {width: w, height: h};
 
-  if (engine === YouTubePlayer || engine === HTML5Player) {
+  if (engine === YouTubePlayer) {
     size = YT_PLAYER_SIZES.small;
     $.each(YT_PLAYER_SIZES, function(k, v) {
       if (v.width > size.width && v.width < w && v.height < h) {
@@ -1223,8 +1223,26 @@ function SoundCloudPlayer() {
 function HTML5Player() { /*jshint ignore:line*/
   logLady('HTML5Player()');
 
+  HTML5Player.getPlayerSize = function() {
+    var size = getPlayerSize();  // getting base size
+    if (_(HTML5Player).has('videoWidth') && _(HTML5Player).has('videoHeight')) {
+      // adjusting width according to video aspect ratio + being paranoid... \:D/
+      size.width = Math.floor(HTML5Player.videoWidth / (HTML5Player.videoHeight || 1.0) * size.height); 
+    }
+    return size;
+  }
+
+  Player.autosize = _.compose(getAutosize, HTML5Player.getPlayerSize);
+
   HTML5Player.newPlayer = function(playback) {
     var eventHandlers = [
+      {
+        type: 'loadedmetadata',
+        func: function(event) {
+          _(HTML5Player).extend(_.pick(event.target, 'videoWidth', 'videoHeight'));
+          Player.autosize();
+        }
+      },
       {
         type: 'play',
         func: function() {
@@ -1328,8 +1346,6 @@ function HTML5Player() { /*jshint ignore:line*/
     }
   };
 
-  Player.autosize = _.compose(getAutosize, function(){return getPlayerSize(HTML5Player);});
-  Player.autosize();
 }
 
 
